@@ -1,10 +1,9 @@
 import sys
 sys.path.insert(1, '/home/mag/Projects/igps_app')
 from mongoengine import *
-from db_model.models import *
+from app.models import *
 import requests
 import pandas as pd
-import threading
 import time
 
 # connect to db
