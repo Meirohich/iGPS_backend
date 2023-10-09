@@ -3,15 +3,12 @@ sys.path.insert(1, '/home/mag/Projects/igps_app')
 import utils
 from flask import Flask, request, Response, jsonify, make_response, abort
 from flask_login import LoginManager
-from db_model.models import *
+from models import *
 from flask_pymongo import PyMongo
 from shapely.geometry import Point, Polygon
 
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_bcrypt import Bcrypt
-import uuid
 import jwt
-import dns
 import datetime
 from functools import wraps
 import json
@@ -811,7 +808,7 @@ if __name__ == "__main__":
 
     print("Main")
     app.debug = True
-    app.run(host='0.0.0.0', port=6001)
+    app.run(host='0.0.0.0', port=5000)
     # addnewusers()
     # addnewdevices(username="Askar2019",mongo=mongo)
     # populate_newusers(mongo)
