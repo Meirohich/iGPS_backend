@@ -1,0 +1,688 @@
+import sys
+sys.path.insert(1, '/home/mag/Projects/igps_app')
+import utils
+from flask import Flask, request, Response, jsonify, make_response, abort
+from flask_login import LoginManager
+from db_model.models import *
+from flask_pymongo import PyMongo
+from shapely.geometry import Point, Polygon
+
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_bcrypt import Bcrypt
+import uuid 
+import jwt
+import datetime
+from functools import wraps
+import json
+import operator
+import random
+#from datetime import datetime
+app = Flask(__name__)
+
+app.config['SECRET_KEY']='Th1s1ss3cr3t'
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'sttechdb',
+    'host': 'localhost',
+    'port': 27017
+}
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/sttechdb'
+mongo = PyMongo(app)
+bcrypt = Bcrypt(app)
+
+login_manager = LoginManager()
+db.init_app(app)
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+def token_required(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+
+        token = None
+
+        if 'x-access-tokens' in request.headers:
+            token = request.headers['x-access-tokens']
+        
+        if not token:
+            return jsonify({'message': 'a valid token is missing'})
+        #print(token)
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            #print(data)
+            current_user = NewUsers.objects.get(id=data['id'])
+            #print(current_user.id)
+        except:
+            return jsonify({'message': 'token is invalid'}), 415
+
+        return f(current_user, *args, **kwargs)
+    return decorator
+
+
+@app.route('/dev_to_lat',methods=['POST'])
+def dev_to_lat():
+
+    
+    if request.remote_addr != '127.0.0.1':
+       abort(403)
+    
+    data = request.get_json()
+    username = data["username"]
+
+    devices = mongo.db.devices
+    objs = list(devices.find({"username" : username}))
+   
+    if not objs:
+        #print("Objs is empty")
+        return jsonify({'message':'no devices for this username'})
+   
+    #print("Len of objs: " + str(len(objs)))
+    #print("Username: " + str(username))
+    
+    messengerNameId = 1
+    for obj in objs:
+         
+        #print("new object")
+        #print(obj)
+        #print(obj["esn"])
+
+        messages = obj["messages"]
+        newlist = sorted(messages, key=lambda k: k['unixTime'])
+       
+        #print("----start---")
+        #print(messages)
+        #print("------------")
+        
+        #print("---- IF ----")
+        if len(newlist) > 0:
+            
+            #print(newlist[-1])
+
+            obj_time = newlist[-1]["timeStamp"] 
+            datetime_object = datetime.datetime.strptime(obj_time,'%d/%m/%Y %H:%M:%S %Z')
+            latest_mess_time = datetime_object.strftime("%Y-%m-%dT%H:%M:%S+0000")
+            messengerName = "GPS " + str(messengerNameId)
+            
+            pay = newlist[-1]["payload"]
+            if pay.find("0x5") != -1 or pay.find("0xC") !=-1 or pay.find("0x4") != -1:
+                continue
+
+            batSt, lat, lng= utils.decodeStPay(newlist[-1]["payload"])
+            #print(lng)
+            #print(lat)
+            #print(batSt)
+            #print(latest_mess_time)
+            #print ("Insert or update " + obj["esn"]) 
+            mongo.db.latest_spot_messages.update(
+                    {"messengerId":obj["esn"]},  
+                    {"$set": {"username":username,"feedId":"empty", "latest_message": {
+                        "id": 2344, "messengerId" : obj["esn"], "messageType" : "default", "altitude" : 0,"dateTime": latest_mess_time, "latitude": lat,"longitude": lng,"unixTime": newlist[-1]["unixTime"], "batteryState": batSt,"modelId": "SMARTONE","messengerName":messengerName }, "messengerId": obj["esn"]}},upsert=True)
+
+        messengerNameId = messengerNameId + 1
+
+
+    return jsonify({'message':'successful return'})
+
+           
+ 
+
+@app.route('/reg_smartone',methods=['POST'])
+def reg_smartone():
+
+    if request.remote_addr != '127.0.0.1':
+        abort(403)
+    
+    data = request.get_json()
+    username = data["username"]
+    
+    userid = data['userid']
+    esni = data['esn']
+    # создание новой записи в коллекции устройств devices 
+    # esn серийного номера устройства
+    # обновление esn userprofile или добавление нового документа asset 
+    # check whether this messengerId exists in the Devices collection
+    # if it does not exist then insert
+
+    if mongo.db.devices.find({'esn': esni}).count() > 0:
+        return jsonify({'message': "ESN " + esni + " already exists in the devices"})
+
+    mongo.db.devices.insert_one({"_id":mongo.db.devices.count()+5, "esn":esni, "username":username,"messages":[]})
+    js_data=jsonify({'message': 'devices registered successfully'})
+    return js_data
+
+@app.route("/reg_smartone_c", methods=['POST'])
+def reg_smartone_c():
+
+    if request.remote_addr != '127.0.0.1':
+        abort(403) 
+
+    data = request.get_json()
+    username = data['username']
+    esns = data["esns"]
+
+
+
+@app.route('/is_registered', methods=[ 'POST'])
+def is_registered():  
+    if request.remote_addr != '127.0.0.1':
+        abort(403)  # Forbidden
+    
+    data = request.get_json()  
+    username = data["username"] 
+    
+    if NewUsers.objects(username__contains=username).count() > 0:
+        js_data=jsonify({'message': True})        
+    else:
+        js_data=jsonify({'message': False})
+    
+    return js_data
+
+@app.route('/reg', methods=[ 'POST'])
+def reg():  
+    if request.remote_addr != '127.0.0.1':
+        abort(403)  # Forbidden
+    
+    data = request.get_json()      
+
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')    
+   
+    new_users = mongo.db.new_users
+    newuser = new_users.insert({
+            "_id" : NewUsers.objects.count() + 5,
+            "username": data['username'],
+            "email":  data['email'],
+            "password":  hashed_password,
+            "name" : data['name'], 
+            "mobile" : data['mobile'],
+            "lang" :  data['lang']}) 
+    
+    s = "Total number of users: " + str(NewUsers.objects.count())
+    #print(s)   
+
+    js_data=jsonify({'message': 'registered successfully'})
+
+    return js_data
+
+
+def register_user(_username, _password, _name, _mobile, _lang, _email):
+    
+    password   = bcrypt.generate_password_hash(_password).decode('utf-8')    
+
+    user_id = new_users.insert({
+        'name'       : _name,
+        'username'   : login,
+        'password'   : password,
+        'created'    : created
+        })
+
+    new_user = new_users.find_one({'_id': user_id})
+
+    result = {'email': new_user['name'] + ' is registered'}
+
+    return jsonify({'result' : result})
+
+@app.route('/login', methods=['POST'])  
+def login_user(): 
+ 
+    auth = request.authorization   
+
+    if not auth or not auth.username or not auth.password:
+        return make_response(
+            'could not verify', 
+            401, 
+            {'WWW.Authentication': 'Basic realm: "login required"'}
+        )
+    user = NewUsers.objects.get(username=auth.username)
+    #print(user.id)
+    if bcrypt.check_password_hash(user.password, auth.password):
+        token = jwt.encode(
+            {
+                'id': user.id, 
+                'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+            }, 
+            app.config['SECRET_KEY']
+        )
+        return jsonify({'token' : token, 'name': user.name, 'email': user.email, '_id': user.id})
+    
+    return make_response(
+        'could not verify', 
+        401, 
+        {'WWW.Authentication': 'Basic realm: "login required"'}
+    )
+
+@app.route('/assets', methods=['GET'])
+@token_required
+def get_assets(current_user):
+    
+    # check whether assets are in zone and update the is_inzone field in the database
+    is_inzone(current_user)
+    
+    assets = Asset.objects().filter(user=current_user).to_json()   
+    
+    #print(assets)   
+    #print("-----")
+    
+    data = json.loads(assets)
+    #alist = json.dumps(assets)
+    #print(data)
+    ret_assets = []
+    for asset in data:
+        #print(asset)
+        
+        device = Device.objects().filter(id=int(asset['device'])).to_json()     
+        device = json.loads(device)
+        #print("DEVICE")
+        #print(device)
+        
+        asset['esn']=device[0]['messenger_id']
+        ret_assets.append(asset)
+    
+    js_data=jsonify(ret_assets)
+
+    return js_data
+    #return Response(assets, mimetype="application/json", status=200)
+
+@app.route('/uassets/<int:id>', methods=['PUT'])
+@token_required
+def update_assets(current_user, id):
+    
+    #print("update Edges")
+
+    data = request.get_json()
+    #print(data['asset_name'])
+    Asset.objects(id=data['_id']).update(
+        asset_name=data['asset_name'] # list of points with coordinates        
+    )    
+
+    js_data=jsonify({'message': 'updated successfully'})
+
+    return js_data
+
+@app.route('/cmark', methods=['POST'])
+@token_required
+def create_marks(current_user):
+    
+    #print("add mark")
+
+    data = request.get_json()
+  
+    marks_col = mongo.db.marks
+    #print(current_user['id'])
+
+    random.seed(datetime.datetime.now())
+
+    data = {
+        "_id":random.randint(1,10000) + 3,
+        "userid": current_user['id'],
+        "username": current_user['username'],
+        "mark_name" : data['mark_name'],
+        "mark_type" : data['mark_type'],
+        "mark_lat": data["mark_lat"],
+        "mark_lng": data["mark_lng"]
+    }
+    rec_id = marks_col.insert_one(data).inserted_id
+    #print(rec_id)
+    #rec_id = 1
+    js_data=jsonify({'message': 'registered successfully',"db_id":str(rec_id)})
+
+    return js_data
+
+@app.route('/rmark', methods=['GET'])
+@token_required
+def read_marks(current_user):
+    
+    #print("read Mark")
+    #print(current_user['username'])
+    #data = request.get_json()
+    
+    marks_col = mongo.db.marks
+
+    objs = list(marks_col.find({"username" : current_user['username']}))        
+   
+    #print(objs)
+    
+    i = 1
+    
+    #for obj in objs:
+    #    obj["_id"] = 
+    #    i = i + 1
+    
+    js_data=jsonify(objs)
+
+    return js_data
+
+@app.route('/umark/<int:id>', methods=['PUT'])
+@token_required
+def update_marks(current_user, id):
+    
+    #print("update Edges")
+
+    data = request.get_json()
+    marks_col = mongo.db.marks
+
+    marks_col.update_one({"_id":id},
+            {"$set": {
+                "mark_name" : data['mark_name'],
+                "mark_type" : data['mark_type'],
+                "mark_lat": data["mark_lat"],
+                "mark_lng": data["mark_lng"]
+              }
+            })
+    
+    js_data=jsonify({'message': 'updated successfully'})
+
+    return js_data
+
+@app.route('/dmark/<int:id>', methods=['DELETE'])
+@token_required
+def delete_marks(user,id):
+    
+    #print("delete Edges")
+    
+    marks_col = mongo.db.marks
+
+    marks_col.delete_one({"_id":id})
+  
+    js_data=jsonify({'message': 'deleted successfully'})
+
+    return js_data
+
+
+
+
+@app.route('/cedges', methods=['POST'])
+@token_required
+def add_edges(current_user):
+    
+    #print("add Edges")
+
+    data = request.get_json()
+ 
+    
+    geoedge = GeoEdge(
+        id=GeoEdge.objects.count() + 1254,
+        user=current_user,
+        vertices=data['vertices'] # list of points with coordinates
+        #edges=data['edges'] # list of pair of coordinates
+    )
+    geoedge.save()
+
+    js_data=jsonify({'message': 'registered successfully'})
+
+    return js_data
+
+@app.route('/redges', methods=['GET'])
+@token_required
+def read_edges(current_user):
+    
+    #print("read Edges")
+
+    #data = json.loads(request.data)
+
+    geoedge = GeoEdge.objects().filter(user=current_user).to_json()
+   
+    return Response(geoedge, mimetype="application/json", status=200)
+
+@app.route('/uedges/<int:id>', methods=['PUT'])
+@token_required
+def update_edges(current_user, id):
+    
+    #print("update Edges")
+
+    data = request.get_json()
+
+    GeoEdge.objects(id=data['_id']).update(
+        vertices=data['vertices'] # list of points with coordinates        
+    )    
+
+    js_data=jsonify({'message': 'updated successfully'})
+
+    return js_data
+
+@app.route('/dedges/<int:id>', methods=['DELETE'])
+@token_required
+def delete_edges(user,id):
+    
+    #print("delete Edges")
+
+    #data = json.loads(request.data)
+
+    #obj = GeoEdge.objects.get(id=data['gedgeid']) # list of points with coordinates        
+    obj = GeoEdge.objects().filter(id=id)
+    
+    obj.delete()        
+
+    js_data=jsonify({'message': 'deleted successfully'})
+
+    return js_data
+
+
+
+#@app.route('/is_inzone', methods=['GET'])
+#@token_required
+def is_inzone(current_user):
+    
+    #print("Check whether in zone")
+
+    # geo zabor
+    geoedge = json.loads(GeoEdge.objects().filter(user=current_user).to_json())
+    
+    # list of assets
+    assets = json.loads(Asset.objects().filter(user=current_user).to_json())
+
+    #print(geoedge[0]["vertices"])
+    points = []
+    #print(geoedge)
+    if len(geoedge) > 0:
+        geoedge[0]["vertices"].sort(key=operator.itemgetter("pos"))
+
+        # create a list of Points 
+        for el in geoedge[0]["vertices"]:
+            points.append(Point(el["lat"], el["lng"]))      
+        
+        # create a polygon
+        poly = Polygon([[p.x, p.y] for p in points])
+
+        #print(assets)
+        list_dict_assets = []
+        
+        for asset in assets:
+            asset_point = Point(asset["current_lat"], asset["current_lng"])
+            #print(asset_point)
+            #print(poly.contains(asset_point))
+            dict_asset = {
+                "id": asset["_id"],
+                "is_inzone": poly.contains(asset_point)
+            }
+            list_dict_assets.append(dict_asset)
+            Asset.objects(id=asset["_id"]).update(
+                is_inzone=dict_asset["is_inzone"]
+            )
+
+@app.route('/reg_devices', methods=[ 'POST'])
+def reg_devices():  
+    if request.remote_addr != '127.0.0.1':
+        abort(403)  # Forbidden
+    
+    data = request.get_json()      
+    username = data["username"]
+    latest_message_col = mongo.db.latest_spot_messages
+    objs = list(latest_message_col.find({"username" : username}))
+    #print(objs)
+    #print("Len of objs: " + str(len(objs)))
+    #print("Username: " + str(username))
+    for obj in objs:
+        
+        #print(obj["latest_message"]["modelId"])
+        messengerId = obj["messengerId"]
+        if Device.objects(messenger_id__contains=messengerId).count() > 0:
+            print("Yes")
+        else:
+            print("No")
+        
+        # check whether this messengerId exists in the Devices collection
+        # if it does not exist then insert
+        
+            device = Device(
+                id=Device.objects.count()+19,
+                user = NewUsers.objects.get(username=username),
+                device_type = obj["latest_message"]["modelId"],
+                messenger_id = obj["messengerId"]
+            )
+            device.save()   
+    
+    s = "Total number of devices: " + str(Device.objects.count())
+    #print(s)   
+
+    js_data=jsonify({'message': 'devices registered successfully'})
+
+    return js_data
+
+@app.route('/history',methods=['POST'])
+@token_required
+def selectLastNMsg(current_user):
+    # select k messages(t1,..tk) in devices collection from Clients
+
+    data = json.loads(request.data)
+    #print(data['esn'])
+    #print(data['number_of_points'])
+
+    esni = data['esn']
+    k = data['number_of_points']
+
+    # check from device which type
+    
+    devicetype = mongo.db.device.find({"messenger_id":data['esn']})
+    l_dev = list(devicetype)
+    #print(l_dev[0])
+   
+    js_data = []
+    if l_dev[0]['device_type'] == "SMARTONE":
+        #print(True)
+        #print(k)
+        lastmss = mongo.db.devices.aggregate([
+            { "$match":{"esn": esni} },
+            { "$project":{"_id":0, "esn":1, "messages":1} },
+            { "$unwind": "$messages"},
+            { "$sort": {"messages.unixTime": -1} },
+            {"$limit": k}
+        ])
+
+     # 
+        msgss = []
+        #print('last k mss:::', lastmss)
+        for llm in lastmss:
+            #print(llm['messages'])
+            
+            payload = llm["messages"]["payload"]
+            if payload.find("0x5") != -1 or payload.find("0xC") != -1 or payload.find("0x4") != -1:
+                continue
+
+
+            batSt, lat, lng= utils.decodeStPay(llm['messages']["payload"])
+            timest = llm['messages']['timeStamp']
+            dic = {
+              "batSt": batSt,
+              "lat":lat,
+              "lng":lng,
+              "timestamp":timest
+            }
+
+            msgss.append(dic)
+        #print('llm',llm)
+        #print('\nMSGSS:::',msgss)
+        #print(len(msgss))
+        #print(msgss[0])
+        lnmss = list(msgss) #list(lastmss)
+    
+        #print(lnmss)
+        #print("Print has been finished")
+    
+        js_data=jsonify(lnmss)
+
+    else:
+        dev = mongo.db.all_latest_messages.find({"messengerId":data['esn']})
+        ldev = list(dev)
+        #print(ldev)
+        if (k > len(ldev[0]['messages'])):
+            messages = ldev[0]['messages']
+        else:
+            messages = ldev[0]['messages'][-k:-1]
+        
+        #print(messages)  
+        msgss = []
+        
+        for mess in messages:
+
+            dic = {
+                "batSt": mess['batteryState'],
+                "lat": mess['latitude'],
+                "lng": mess['longitude'],
+                "timestamp": mess['dateTime']
+            }
+
+            msgss.append(dic)
+        js_data = jsonify(msgss)
+   
+    return  js_data #Response(lnmss, mimetype="application/json", status=200)
+
+
+
+@app.route('/add_assets', methods=[ 'POST'])
+def add_newasset():
+    
+    if request.remote_addr != '127.0.0.1':
+        abort(403)  # Forbidden
+
+    for user_object in NewUsers.objects:
+        
+        username = user_object.username
+
+        latest_message_col = mongo.db.latest_spot_messages
+        device_col = mongo.db.device
+        objs = list(latest_message_col.find({"username" : username}))
+        #print(username)
+        
+        for obj in objs:
+            #print(obj["messengerId"])
+            
+            #tt =device_col.find_one({"messenger_id":obj["messengerId"]})
+            #print(tt)
+            
+            if Asset.objects(device__contains=Device.objects.get(messenger_id=obj["messengerId"])).count() > 0:
+                print("Yes, asset " + obj["latest_message"]["messengerName"] + " already exists")
+            else:
+                print("No, asset " + obj["latest_message"]["messengerName"] + " is not registered")
+
+                asset = Asset(
+                    id = Asset.objects.count() + 28,
+                    user = user_object,
+                    device = Device.objects.get(messenger_id=obj["messengerId"]),
+                    asset_name= obj["latest_message"]["messengerName"],
+                    current_lat = obj["latest_message"]["latitude"],
+                    current_lng = obj["latest_message"]["longitude"],
+                    battery_status = obj["latest_message"]["batteryState"]
+                )
+                asset.save()
+
+    s = "Total number of assets: " + str(Asset.objects.count())
+    #print(s)   
+
+    js_data=jsonify({'message': 'devices registered successfully'})
+
+    return js_data
+
+
+@app.route('/notifications')
+def get_notifications():
+    pass
+
+if __name__ == "__main__":
+
+    #print("Main")
+    app.run(debug=True,port=5001,host='0.0.0.0')
+    #addnewusers()
+    #addnewdevices(username="Askar2019",mongo=mongo)
+    #populate_newusers(mongo)
+    #one_query()
+    #populate_device(mongo)
+    #add_newasset(mongo)

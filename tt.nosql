@@ -1,0 +1,7 @@
+EDIT:
+
+In the above example last 2 fields false, true specifies the upsert and multi flags.
+
+Upsert: If set to true, creates a new document when no document matches the query criteria.
+
+Multi: If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document.
