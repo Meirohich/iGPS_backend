@@ -67,9 +67,9 @@ def index():
 def payment():
     command = request.args.get('command')
     args = request.args
-    if command == 'check':
+    if command == 'check' and len(args) == 4:
         return check(args)
-    elif command == 'pay':
+    elif command == 'pay' and len(args) == 5:
         return pay(args)
     else:
         return jsonify({'message': 'invalid request'}), 400
