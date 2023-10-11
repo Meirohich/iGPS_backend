@@ -88,7 +88,7 @@ def pay():
 
     if command == 'pay':
         js_data = jsonify({'txn_id': txn_id,
-                           'txn_id': 'id of payment document',
+                           'prv_txn_id': 'id of payment document',
                            'result': 0,
                            'sum': sum,
                            'comment': 'OK'})
