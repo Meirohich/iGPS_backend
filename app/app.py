@@ -71,7 +71,27 @@ def check():
     sum = request.args.get('sum')
 
     if command == 'check':
-        js_data = jsonify({'txn_id': txn_id, 'result': 0, 'comment': ''})
+        js_data = jsonify({'txn_id': txn_id,
+                           'result': 0,
+                           'comment': ''})
+    else:
+        js_data = jsonify({'message': 'invalid request'}), 400
+    return js_data
+
+@app.route('/payment')
+def pay():
+    command = request.args.get('command')
+    txn_id = request.args.get('txn_id')
+    txn_date = request.args.get('txn_date')
+    account = request.args.get('account')
+    sum = request.args.get('sum')
+
+    if command == 'pay':
+        js_data = jsonify({'txn_id': txn_id,
+                           'txn_id': 'id of payment document',
+                           'result': 0,
+                           'sum': sum,
+                           'comment': 'OK'})
     else:
         js_data = jsonify({'message': 'invalid request'}), 400
     return js_data
