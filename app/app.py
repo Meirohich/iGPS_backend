@@ -28,7 +28,7 @@ app.config['MONGODB_SETTINGS'] = {
     'db': 'sttechdb',
     'host': 'cluster0.mongodb.net',
     'port': 27017,
-    'username': 'meirohich',  # Your MongoDB Atlas username
+    'username': 'jstarsik200211',  # Your MongoDB Atlas username
     'password': '12345',  # Your MongoDB Atlas password
     'authentication_source': 'admin',  # This is usually 'admin'
     'tls': True,  # Enable TLS/SSL encryption
@@ -332,7 +332,9 @@ def register_user(_username, _password, _name, _mobile, _lang, _email):
 
     return jsonify({'result' : result})
 
-@app.route('/login', methods=['POST'])
+
+@app.route('/login')
+# @app.route('/login', methods=['POST'])
 def login_user():
 
     # auth = request.authorization
