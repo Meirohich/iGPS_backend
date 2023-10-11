@@ -64,36 +64,39 @@ def index():
 
 
 @app.route('/payment')
-def check():
+def payment():
     command = request.args.get('command')
-    txn_id = request.args.get('txn_id')
-    account = request.args.get('account')
-    sum = request.args.get('sum')
-
+    args = request.args
     if command == 'check':
-        js_data = jsonify({'txn_id': txn_id,
-                           'result': 0,
-                           'comment': ''})
+        return check(args)
+    elif command == 'pay':
+        return pay(args)
     else:
-        js_data = jsonify({'message': 'invalid request'}), 400
+        return jsonify({'message': 'invalid request'}), 400
+
+
+def check(args):
+    txn_id = args.get('txn_id')
+    account = args.get('account')
+    sum = args.get('sum')
+
+    js_data = jsonify({'txn_id': txn_id,
+                        'result': 0,
+                        'comment': ''})
     return js_data
 
-@app.route('/payment')
-def pay():
-    command = request.args.get('command')
-    txn_id = request.args.get('txn_id')
-    txn_date = request.args.get('txn_date')
-    account = request.args.get('account')
-    sum = request.args.get('sum')
 
-    if command == 'pay':
-        js_data = jsonify({'txn_id': txn_id,
-                           'prv_txn_id': 'id of payment document',
-                           'result': 0,
-                           'sum': sum,
-                           'comment': 'OK'})
-    else:
-        js_data = jsonify({'message': 'invalid request'}), 400
+def pay(args):
+    txn_id = args.get('txn_id')
+    txn_date = args.get('txn_date')
+    account = args.get('account')
+    sum = args.get('sum')
+
+    js_data = jsonify({'txn_id': txn_id,
+                        'prv_txn_id': 'id of payment document',
+                        'result': 0,
+                        'sum': sum,
+                        'comment': 'OK'})
     return js_data
 
 def token_required(f):
