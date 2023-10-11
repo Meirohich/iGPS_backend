@@ -4,7 +4,7 @@ from flask_pymongo import PyMongo
 from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/sttechdb'
+app.config['MONGO_URI'] = 'mongodb+srv://jstarsik200211:12345@cluster0.bggioa8.mongodb.net/sttechdb'
 app.config['SECRET_KEY'] = 'Th1s1ss3cr3t'
 
 

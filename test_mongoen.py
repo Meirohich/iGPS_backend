@@ -8,12 +8,18 @@ from flask_pymongo import PyMongo
 db = MongoEngine()
 app = Flask(__name__)
 
+app.config['SECRET_KEY']='Th1s1ss3cr3t'
 app.config['MONGODB_SETTINGS'] = {
     'db': 'sttechdb',
-    'host': 'localhost',
-    'port': 27017
+    'host': 'cluster0.mongodb.net',
+    'port': 27017,
+    'username': 'meirohich',  # Your MongoDB Atlas username
+    'password': '12345',  # Your MongoDB Atlas password
+    'authentication_source': 'admin',  # This is usually 'admin'
+    'tls': True,  # Enable TLS/SSL encryption
+    'retryWrites': True,  # Enable retryable writes
 }
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/sttechdb'
+app.config['MONGO_URI'] = 'mongodb+srv://jstarsik200211:12345@cluster0.bggioa8.mongodb.net/sttechdb'
 
 db.init_app(app)
 mongo  = PyMongo(app)

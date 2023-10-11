@@ -9,11 +9,12 @@ from shapely.geometry import Point, Polygon
 
 from flask_bcrypt import Bcrypt
 import jwt
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 import json
 import operator
 import random
+import base64
 from datetime import datetime
 
 import firebase_admin
@@ -334,25 +335,35 @@ def register_user(_username, _password, _name, _mobile, _lang, _email):
 @app.route('/login', methods=['POST'])
 def login_user():
 
-    auth = request.authorization
+    # auth = request.authorization
+    auth = request.headers.get('Authorization')
 
-    if not auth or not auth.username or not auth.password:
+    #if not auth or not auth.username or not auth.password:
+    if not auth or not auth.startswith('Basic '):
         return make_response(
             'could not verify',
             401,
             {'WWW.Authentication': 'Basic realm: "login required"'}
         )
-    user = NewUsers.objects.get(username=auth.username)
-    print(user.id)
-    if bcrypt.check_password_hash(user.password, auth.password):
+
+    auth = auth[6:]  # Remove 'Basic ' prefix
+    credentials = base64.b64decode(auth).decode('utf-8')
+
+    username, password = credentials.split(':')
+    print(username + ' ' + password)
+    new_users = mongo.db.new_users
+    user = new_users.find_one({'username': username})
+    # user = NewUsers.objects.get(username=username)
+    print(user['_id'])
+    if bcrypt.check_password_hash(user['password'], password):
         token = jwt.encode(
             {
-                'id': user.id,
-                'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+                'id': user['_id'],
+                'exp' : datetime.utcnow() + timedelta(minutes=30)
             },
             app.config['SECRET_KEY']
         )#.decode('utf-8')
-        return jsonify({'token': token, 'name': user.name, 'email': user.email, '_id': user.id})
+        return jsonify({'token': token, 'name': user['name'], 'email': user['email'], '_id': user['_id']})
 
     return make_response(
         'could not verify',

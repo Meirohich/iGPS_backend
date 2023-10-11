@@ -7,7 +7,7 @@ import pandas as pd
 import time
 
 # connect to db
-connect(db="sttechdb", host="127.0.0.1", port=27017)
+connect(db="sttechdb", host="0.0.0.0", port=27017)
 connect(host='mongodb://127.0.0.1:27017/sttechdb')
 
 
