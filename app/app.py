@@ -9,7 +9,7 @@ from shapely.geometry import Point, Polygon
 
 from flask_bcrypt import Bcrypt
 import jwt
-import datetime
+from datetime import datetime
 from functools import wraps
 import json
 import operator
@@ -90,8 +90,8 @@ def token_required(f):
 def dev_to_lat():
 
 
-    if request.remote_addr != '127.0.0.1':
-       abort(403)
+    #if request.remote_addr != '127.0.0.1':
+    #   abort(403)
 
     data = request.get_json()
     print(data)
@@ -127,7 +127,7 @@ def dev_to_lat():
             print(newlist[-1])
 
             obj_time = newlist[-1]["timeStamp"]
-            datetime_object = datetime.datetime.strptime(obj_time,'%d/%m/%Y %H:%M:%S %Z')
+            datetime_object = datetime.strptime(obj_time,'%d/%m/%Y %H:%M:%S %Z')
             latest_mess_time = datetime_object.strftime("%Y-%m-%dT%H:%M:%S+0000")
             messengerName = "GPS " + str(messengerNameId)
 
@@ -141,10 +141,35 @@ def dev_to_lat():
             print(batSt)
             print(latest_mess_time)
             print ("Insert or update " + obj["esn"])
-            mongo.db.latest_spot_messages.update(
-                    {"messengerId":obj["esn"]},
-                    {"$set": {"username":username,"feedId":"empty", "latest_message": {
-                        "id": 2344, "messengerId" : obj["esn"], "messageType" : "default", "altitude" : 0,"dateTime": latest_mess_time, "latitude": lat,"longitude": lng,"unixTime": newlist[-1]["unixTime"], "batteryState": batSt,"modelId": "SMARTONE","messengerName":messengerName }, "messengerId": obj["esn"]}},upsert=True)
+            result = mongo.db.latest_spot_messages.update_one(
+                {"messengerId": obj["esn"]},
+                {
+                    "$set": {
+                        "username": username,
+                        "feedId": "empty",
+                        "latest_message": {
+                            "id": 2346,
+                            "messengerId": obj["esn"],
+                            "messageType": "default",
+                            "altitude": 0,
+                            "dateTime": latest_mess_time,
+                            "latitude": lat,
+                            "longitude": lng,
+                            "unixTime": newlist[-1]["unixTime"],
+                            "batteryState": batSt,
+                            "modelId": "SMARTONE",
+                            "messengerName": messengerName
+                        },
+                        "messengerId": obj["esn"]
+                    }
+                },
+                upsert=True
+            )
+
+            #mongo.db.latest_spot_messages.update(
+            #        {"messengerId":obj["esn"]},
+            #        {"$set": {"username":username,"feedId":"empty", "latest_message": {
+            #            "id": 2344, "messengerId" : obj["esn"], "messageType" : "default", "altitude" : 0,"dateTime": latest_mess_time, "latitude": lat,"longitude": lng,"unixTime": newlist[-1]["unixTime"], "batteryState": batSt,"modelId": "SMARTONE","messengerName":messengerName }, "messengerId": obj["esn"]}},upsert=True)
 
         messengerNameId = messengerNameId + 1
 
@@ -155,13 +180,13 @@ def dev_to_lat():
 @app.route('/reg_smartone',methods=['POST'])
 def reg_smartone():
 
-    if request.remote_addr != '127.0.0.1':
-        abort(403)
+    # if request.remote_addr != '127.0.0.1':
+    #    abort(403)
 
     data = request.get_json()
     username = data["username"]
 
-    userid = data['userid']
+    # userid = data['userid']
     esni = data['esn']
     # создание новой записи в коллекции устройств devices
     # esn серийного номера устройства
@@ -169,10 +194,19 @@ def reg_smartone():
     # check whether this messengerId exists in the Devices collection
     # if it does not exist then insert
 
-    if mongo.db.devices.find({'esn': esni}).count() > 0:
+    # if mongo.db.devices.find({'esn': esni}).count() > 0:
+    if mongo.db.devices.count_documents({'esn': esni}) > 0:
         return jsonify({'message': "ESN " + esni + " already exists in the devices"})
 
-    mongo.db.devices.insert_one({"_id":mongo.db.devices.count()+16, "esn":esni, "username":username,"messages":[]})
+    count = mongo.db.devices.count_documents({})
+    new_device_document = {
+        "_id": count + 16,
+        "esn": esni,
+        "username": username,
+        "messages": []
+    }
+    # mongo.db.devices.insert_one({"_id":mongo.db.devices.count()+16, "esn":esni, "username":username,"messages":[]})
+    mongo.db.devices.insert_one(new_device_document)
     js_data=jsonify({'message': 'devices registered successfully'})
     return js_data
 
@@ -206,8 +240,8 @@ def is_registered():
 
 @app.route('/reg', methods=[ 'POST'])
 def reg():
-    if request.remote_addr != '127.0.0.1':
-        abort(403)  # Forbidden
+    # if request.remote_addr != '127.0.0.1':
+    #     abort(403)  # Forbidden
 
     data = request.get_json()
 
@@ -593,7 +627,7 @@ def reg_devices():
 def selectLastNMsg(current_user):
     # select k messages(t1,..tk) in devices collection from Clients
 
-    
+
     #print(request.data)
     #print("------")
     data = json.loads(request.data)
@@ -609,7 +643,7 @@ def selectLastNMsg(current_user):
     devicetype = mongo.db.device.find({"messenger_id":data['esn']})
     l_dev = list(devicetype)
     #print(l_dev[0])
-    
+
     js_data = []
     if l_dev[0]['device_type'] == "SMARTONE":
         #print(True)
@@ -808,7 +842,7 @@ if __name__ == "__main__":
 
     print("Main")
     app.debug = True
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=6001)
     # addnewusers()
     # addnewdevices(username="Askar2019",mongo=mongo)
     # populate_newusers(mongo)
