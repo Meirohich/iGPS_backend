@@ -63,18 +63,18 @@ def index():
       return "Hello world!"
 
 
-@app.route('/payment', methods=['GET'])
+@app.route('/payment')
 def check():
     command = request.args.get('command')
     txn_id = request.args.get('txn_id')
     account = request.args.get('account')
     sum = request.args.get('sum')
 
-    if command=='check':
+    if command == 'check':
         js_data = jsonify({'txn_id': txn_id, 'result': 0, 'comment': ''})
     else:
         js_data = jsonify({'message': 'invalid request'}), 400
-        return js_data
+    return js_data
 
 def token_required(f):
     @wraps(f)
