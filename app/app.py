@@ -333,8 +333,7 @@ def register_user(_username, _password, _name, _mobile, _lang, _email):
     return jsonify({'result' : result})
 
 
-@app.route('/login')
-# @app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login_user():
 
     # auth = request.authorization
