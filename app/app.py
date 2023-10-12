@@ -28,7 +28,7 @@ app.config['MONGODB_SETTINGS'] = {
     'db': 'sttechdb',
     'host': 'cluster0.mongodb.net',
     'port': 27017,
-    'username': 'jstarsik200211',  # Your MongoDB Atlas username
+    'username': 'meirohich',  # Your MongoDB Atlas username
     'password': '12345',  # Your MongoDB Atlas password
     'authentication_source': 'admin',  # This is usually 'admin'
     'tls': True,  # Enable TLS/SSL encryption
@@ -53,11 +53,20 @@ except Exception as e:
 
 @app.route('/test_mongodb_connection')
 def test_mongodb_connection():
-    data = mongo.db.new_users.find_one()
-    if data:
-        return jsonify({'message': 'MongoDB connection successful', 'data': data})
-    else:
-        return jsonify({'message': 'MongoDB connection failed'})
+    # data = mongo.db.new_users.find_one()
+    try:
+        data = mongo.db.new_users.find_one()
+        if data:
+            return jsonify({'message': 'MongoDB connection successful', 'data': data})
+        else:
+            return jsonify({'message': 'No data found in the collection'})
+    except Exception as e:
+        return jsonify({'message': f'MongoDB query error: {str(e)}'})
+
+    # if data:
+    #     return jsonify({'message': 'MongoDB connection successful', 'data': data})
+    # else:
+    #     return jsonify({'message': 'MongoDB connection failed'})
 
 @app.route('/')
 def index():
@@ -400,26 +409,38 @@ def logout_user(current_user):
 def get_assets(current_user):
 
     # check whether assets are in zone and update the is_inzone field in the database
-    is_inzone(current_user)
+    #is_inzone(current_user)
+    assets_db = mongo.db.asset
+    user_id = current_user['_id']
+    assets_cursor = assets_db.find({'user': user_id})
+    # assets = Asset.objects().filter(user=current_user).to_json()
 
-    assets = Asset.objects().filter(user=current_user).to_json()
-
-    print(assets)
+    print(assets_cursor)
     print("-----")
 
-    data = json.loads(assets)
+    json_assets = []
+    for asset in assets_cursor:
+        # asset_dict = json.loads(asset)
+        json_assets.append(asset)
+
+    #data = json.loads(assets)
     ret_assets = []
-    for asset in data:
-        print(asset)
-
-        device = Device.objects().filter(id=int(asset['device'])).to_json()
-        device = json.loads(device)
+    for assets in json_assets:
+        print(assets)
+        devices_db = mongo.db.device
+        device_id = assets['device']
+        device_cursor = devices_db.find({'_id': device_id})
+        json_devices = []
+        for device in device_cursor:
+            json_devices.append(device)
+        # device = Device.objects().filter(id=int(asset['device'])).to_json()
+        # device = json.loads(device)
         print("DEVICE")
-        print(device)
+        print(device_cursor)
 
-        asset['esn']=device[0]['messenger_id']
-        asset['device_type']=device[0]['device_type']
-        ret_assets.append(asset)
+        assets['esn']=json_devices[0]['messenger_id']
+        assets['device_type']=json_devices[0]['device_type']
+        ret_assets.append(assets)
 
     js_data=jsonify(ret_assets)
 
