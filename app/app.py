@@ -115,8 +115,10 @@ def token_required(f):
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
             print(data)
-            current_user = NewUsers.objects.get(id=data['id'])
-            print(current_user.id)
+            new_users = mongo.db.new_users
+            current_user = new_users.find_one({'_id':data['id']})
+            # current_user = NewUsers.objects.get(id=data['id'])
+            print(current_user['_id'])
         except:
             return jsonify({'message': 'token is invalid'}), 415
 
@@ -364,6 +366,8 @@ def login_user():
             },
             app.config['SECRET_KEY']
         )#.decode('utf-8')
+        update_data = {'$set': {'firebase_token': 1}}
+        result = new_users.update_one(user, update_data)
         return jsonify({'token': token, 'name': user['name'], 'email': user['email'], '_id': user['_id']})
 
     return make_response(
@@ -377,13 +381,18 @@ def login_user():
 @token_required
 def logout_user(current_user):
     print("Logout user: ")
-    print(current_user.id)
-    NewUsers.objects(id=current_user.id).update(
-        firebase_token=None
-    )
-    js_data = jsonify({'message': 'updated successfully'})
+    print(current_user['_id'])
+    new_users = mongo.db.new_users
+    update_data = {'$set': {'firebase_token': None}}
+    result = new_users.update_one(current_user, update_data)
+    if result.modified_count > 0:
+        js_data = jsonify({'message': 'updated successfully'})
+        return js_data
+    else:
+        return jsonify({'message': "User not found or no changes made."})
 
-    return js_data
+    #NewUsers.objects(id=current_user.id).update(
+    #    firebase_token=None)
 
 
 @app.route('/assets', methods=['GET'])

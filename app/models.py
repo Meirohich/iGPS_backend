@@ -17,6 +17,8 @@ class NewUsers(UserMixin, db.Document):
     lang = db.StringField()
     firebase_token = db.StringField()
 
+
+
 class Device(db.Document):
 
     id = db.IntField(primary_key=True)
