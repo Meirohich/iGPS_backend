@@ -407,7 +407,6 @@ def logout_user(current_user):
     #NewUsers.objects(id=current_user.id).update(
     #    firebase_token=None)
 
-
 @app.route('/assets', methods=['GET'])
 @token_required
 def get_assets(current_user):
@@ -451,6 +450,7 @@ def get_assets(current_user):
     return js_data
     #return Response(assets, mimetype="application/json", status=200)
 
+<<<<<<< HEAD
 
 @app.route('/assets/<int:id>', methods=['GET'])
 @token_required
@@ -466,6 +466,38 @@ def get_asset_byid(current_user, id):
     else:
         return jsonify({'message': "This user does not have this device"})
 
+=======
+# @app.route('/assets', methods=['GET'])
+# @token_required
+# def get_assets(current_user):
+
+#     # check whether assets are in zone and update the is_inzone field in the database
+#     is_inzone(current_user)
+
+#     assets = Asset.objects().filter(user=current_user).to_json()
+
+#     print(assets)
+#     print("-----")
+
+#     data = json.loads(assets)
+#     ret_assets = []
+#     for asset in data:
+#         print(asset)
+
+#         device = Device.objects().filter(id=int(asset['device'])).to_json()
+#         device = json.loads(device)
+#         print("DEVICE")
+#         print(device)
+
+#         asset['esn']=device[0]['messenger_id']
+#         asset['device_type']=device[0]['device_type']
+#         ret_assets.append(asset)
+
+#     js_data=jsonify(ret_assets)
+
+#     return js_data
+#     #return Response(assets, mimetype="application/json", status=200)
+>>>>>>> assets from server
 
 @app.route('/uassets/<int:id>', methods=['PUT'])
 @token_required
