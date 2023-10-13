@@ -447,6 +447,22 @@ def get_assets(current_user):
     return js_data
     #return Response(assets, mimetype="application/json", status=200)
 
+
+@app.route('/assets/<int:id>', methods=['GET'])
+@token_required
+def get_asset_byid(current_user, id):
+
+    #is_inzone(current_user)
+    assets_db = mongo.db.asset
+    user_id = current_user['_id']
+    device = assets_db.find_one({'user': user_id, '_id': id})
+    if device:
+        js_data = jsonify(device)
+        return js_data
+    else:
+        return jsonify({'message': "This user does not have this device"})
+
+
 @app.route('/uassets/<int:id>', methods=['PUT'])
 @token_required
 def update_assets(current_user, id):
@@ -455,14 +471,23 @@ def update_assets(current_user, id):
 
     data = request.get_json()
     print(data['asset_name'])
-    Asset.objects(id=data['_id']).update(
-        asset_name=data['asset_name'], # list of points with coordinates
-        #color=data['color']
-   )
+    assets_db = mongo.db.asset
+    asset = assets_db.find_one({"_id": id})
+    update_data = {'$set': {'asset_name': data['asset_name']}}
+    result = assets_db.update_one(asset, update_data)
 
-    js_data=jsonify({'message': 'updated successfully'})
+    if result.modified_count > 0:
+        js_data = jsonify({'message': 'updated successfully'})
+        return js_data
+    else:
+        return jsonify({'message': "Something went wrong"})
+    #  Asset.objects(id=data['_id']).update(
+    #      asset_name=data['asset_name'], # list of points with coordinates
+    #      #color=data['color'])
 
-    return js_data
+    # js_data=jsonify({'message': 'updated successfully'})
+
+    # return js_data
 
 @app.route('/cmark', methods=['POST'])
 @token_required
