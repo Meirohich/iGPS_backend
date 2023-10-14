@@ -273,13 +273,15 @@ def reg_smartone_c():
 
 @app.route('/is_registered', methods=[ 'POST'])
 def is_registered():
-    if request.remote_addr != '127.0.0.1':
-        abort(403)  # Forbidden
+    # if request.remote_addr != '127.0.0.1':
+    #     abort(403)  # Forbidden
 
     data = request.get_json()
     username = data["username"]
+    new_users = mongo.db.new_users
 
-    if NewUsers.objects(username__contains=username).count() > 0:
+    if new_users.find_one({'username': username}):
+    # if NewUsers.objects(username__contains=username).count() > 0:
         js_data=jsonify({'message': True})
     else:
         js_data=jsonify({'message': False})
@@ -484,10 +486,33 @@ def update_assets(current_user, id):
     #  Asset.objects(id=data['_id']).update(
     #      asset_name=data['asset_name'], # list of points with coordinates
     #      #color=data['color'])
-
     # js_data=jsonify({'message': 'updated successfully'})
-
     # return js_data
+
+@app.route('/change_pass', methods=['PUT'])
+@token_required
+def change_pass(current_user):
+
+    data = request.get_json()
+
+    old_pass = data['old_pass']
+    new_pass = data['new_pass']
+
+    if not bcrypt.check_password_hash(current_user['password'], old_pass):
+        return jsonify({'message': "Invalid old password"})
+
+    hashed_pass = bcrypt.generate_password_hash(new_pass).decode('utf-8')
+    user = mongo.db.new_users.find_one({"_id": current_user['_id']})
+    update_data = {"$set": {"password": hashed_pass}}
+
+    result = mongo.db.new_users.update_one(user, update_data)
+
+    if result.modified_count > 0:
+        js_data = jsonify({'message': 'updated successfully'})
+        return js_data
+    else:
+        return jsonify({'message': "Something went wrong"})
+
 
 @app.route('/cmark', methods=['POST'])
 @token_required
