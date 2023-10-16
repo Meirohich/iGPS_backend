@@ -289,43 +289,45 @@ def is_registered():
     return js_data
 
 
-@app.route('/reg', methods=[ 'POST'])
+@app.route('/reg', methods=['POST'])
 def reg():
     # if request.remote_addr != '127.0.0.1':
     #     abort(403)  # Forbidden
 
     data = request.get_json()
+    if mongo.db.new_users.find_one({'username': data['username']}):
+        return jsonify({'message': 'username already exists'})
+    else:
+        hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+        count = mongo.db.new_users.count_documents({})
+        new_user_document = {
+            "_id": count + 7,
+            "username": data['username'],
+            "email": data['email'],
+            "password": hashed_password,
+            "name": data['name'],
+            "mobile": data['mobile'],
+            "lang": data['lang'],
+            "firebase_token": 1
+        }
 
-    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-    count = mongo.db.new_users.count_documents({})
-    new_user_document = {
-        "_id": count + 6,
-        "username": data['username'],
-        "email": data['email'],
-        "password": hashed_password,
-        "name": data['name'],
-        "mobile": data['mobile'],
-        "lang": data['lang'],
-        "firebase_token": 1
-    }
+        mongo.db.new_users.insert_one(new_user_document)
+        # new_users = mongo.db.new_users
+        # newuser = new_users.insert({
+        #         "_id" : count + 6,
+        #         "username": data['username'],
+        #         "email":  data['email'],
+        #         "password":  hashed_password,
+        #         "name" : data['name'],
+        #         "mobile" : data['mobile'],
+        #         "lang" :  data['lang'],
+        #         "firebase_token": 1})
+        s = "Total number of users: " + str(mongo.db.new_users.count_documents({}))
+        print(s)
 
-    mongo.db.new_users.insert_one(new_user_document)
-    # new_users = mongo.db.new_users
-    # newuser = new_users.insert({
-    #         "_id" : count + 6,
-    #         "username": data['username'],
-    #         "email":  data['email'],
-    #         "password":  hashed_password,
-    #         "name" : data['name'],
-    #         "mobile" : data['mobile'],
-    #         "lang" :  data['lang'],
-    #         "firebase_token": 1})
-    s = "Total number of users: " + str(mongo.db.new_users.count_documents({}))
-    print(s)
+        js_data = jsonify({'message': 'registered successfully'})
 
-    js_data=jsonify({'message': 'registered successfully'})
-
-    return js_data
+        return js_data
 
 
 def register_user(_username, _password, _name, _mobile, _lang, _email):
@@ -604,8 +606,6 @@ def delete_marks(user,id):
     return js_data
 
 
-
-
 @app.route('/cedges', methods=['POST'])
 @token_required
 def add_edges(current_user):
@@ -797,7 +797,7 @@ def selectLastNMsg(current_user):
 
             batSt, lat, lng= utils.decodeStPay(llm['messages']["payload"])
             timest = llm['messages']['timeStamp']
-            datetime_object = datetime.datetime.strptime(timest,'%d/%m/%Y %H:%M:%S %Z')
+            datetime_object = datetime.strptime(timest,'%d/%m/%Y %H:%M:%S %Z')
             latest_mess_time = datetime_object.strftime("%Y-%m-%dT%H:%M:%S+0000")
 
             dic = {
