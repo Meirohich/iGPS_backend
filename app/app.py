@@ -469,10 +469,7 @@ def get_asset_byid(current_user, id):
     devices_db = mongo.db.device
     device = devices_db.find_one({'user': user_id, '_id': id})
     if asset:
-        # z = json.loads(asset)
         asset.update(device)
-        # result = json.dumps(z)
-        print(asset)
         js_data = jsonify(asset)
         return js_data
     else:
