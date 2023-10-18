@@ -408,6 +408,12 @@ def logout_user(current_user):
     #    firebase_token=None)
 
 
+@app.route('/listUsers', methods=['GET'])
+@token_required
+def get_users(current_user):
+    users_db = mongo.db.new_users
+
+
 @app.route('/assets', methods=['GET'])
 @token_required
 def get_assets(current_user):
@@ -459,9 +465,15 @@ def get_asset_byid(current_user, id):
     #is_inzone(current_user)
     assets_db = mongo.db.asset
     user_id = current_user['_id']
-    device = assets_db.find_one({'user': user_id, '_id': id})
-    if device:
-        js_data = jsonify(device)
+    asset = assets_db.find_one({'user': user_id, '_id': id})
+    devices_db = mongo.db.device
+    device = devices_db.find_one({'user': user_id, '_id': id})
+    if asset:
+        # z = json.loads(asset)
+        asset.update(device)
+        # result = json.dumps(z)
+        print(asset)
+        js_data = jsonify(asset)
         return js_data
     else:
         return jsonify({'message': "This user does not have this device"})
