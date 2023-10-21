@@ -390,6 +390,15 @@ def login_user():
     )
 
 
+@app.route('/check_token', methods=['GET'])
+@token_required
+def check_token(current_user):
+    if not current_user:
+        js_data = jsonify({"message": "token is valid"})
+    else:
+        js_data = jsonify({"message": "token is invalid"})
+    return js_data
+
 @app.route('/logout', methods=['POST'])
 @token_required
 def logout_user(current_user):
@@ -407,16 +416,7 @@ def logout_user(current_user):
     #NewUsers.objects(id=current_user.id).update(
     #    firebase_token=None)
 
-<<<<<<< HEAD
-=======
 
-@app.route('/listUsers', methods=['GET'])
-@token_required
-def get_users(current_user):
-    users_db = mongo.db.new_users
-
-
->>>>>>> ce4b6aa876bf8794c4b7b49e795fbf9cc7de61fe
 @app.route('/assets', methods=['GET'])
 @token_required
 def get_assets(current_user):
