@@ -393,7 +393,7 @@ def login_user():
 @app.route('/check_token', methods=['GET'])
 @token_required
 def check_token(current_user):
-    if not current_user:
+    if current_user:
         js_data = jsonify({"message": "token is valid"})
     else:
         js_data = jsonify({"message": "token is invalid"})
