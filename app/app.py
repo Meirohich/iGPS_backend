@@ -390,6 +390,23 @@ def login_user():
     )
 
 
+@app.route('/refresh_token/<int:id>', methods=['GET'])
+def refresh_token(id):
+    new_users = mongo.db.new_users
+    user = new_users.find_one({'_id': id})
+    if user:
+        token = jwt.encode(
+                {
+                    'id': user['_id'],
+                    'exp' : datetime.utcnow() + timedelta(minutes=30)
+                },
+                app.config['SECRET_KEY']
+            )
+        js_data = jsonify({'token': token})
+    else:
+        js_data = jsonify({'message': 'user not found'}), 415
+    return js_data
+
 @app.route('/check_token', methods=['GET'])
 @token_required
 def check_token(current_user):
