@@ -23,7 +23,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 cred = credentials.Certificate("./igps-dc0c0-firebase-adminsdk-op9lv-646bbb1f7c.json")
 firebase_admin.initialize_app(cred)
-db = firestore.client()
+fs_db = firestore.client()
 
 app = Flask(__name__)
 
@@ -116,7 +116,7 @@ def pay(args):
     return js_data
 
 def getPayments():
-    docs = (db.collection('payments').stream())
+    docs = (fs_db.collection('payments').stream())
     payments = []
     for doc in docs:
         payment = doc.to_dict()
