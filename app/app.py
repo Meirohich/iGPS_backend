@@ -20,6 +20,10 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import messaging
 from firebase_admin import credentials
+from firebase_admin import firestore
+cred = credentials.Certificate("../private-data/igps-dc0c0-firebase-adminsdk-op9lv-646bbb1f7c.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 app = Flask(__name__)
 
@@ -90,9 +94,11 @@ def check(args):
     account = args.get('account')
     sum = args.get('sum')
 
+
     js_data = jsonify({'txn_id': txn_id,
                         'result': 0,
                         'comment': ''})
+    js_data = getPayments()
     return js_data
 
 
@@ -109,6 +115,24 @@ def pay(args):
                         'comment': 'OK'})
     return js_data
 
+def getPayments():
+    docs = (db.collection('payments').stream())
+    payments = []
+    for doc in docs:
+        payment = doc.to_dict()
+        payment['id'] = doc.id
+        payment['data'] = doc._data
+        # payment['user_id'] = doc.user_id
+        # payment['sum'] = doc.sum
+        # payment['createdAt'] = doc.createdAt
+        # payment['status'] = doc.status
+        payments.append(payment)
+
+    for payment in payments:
+        print(f"Payment ID: {payment['id']}")
+        print(f"Payment Info: {payment['data']}")
+        print()
+    return jsonify(payments)
 def token_required(f):
     @wraps(f)
     def decorator(*args, **kwargs):
