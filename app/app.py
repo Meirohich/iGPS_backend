@@ -17,11 +17,14 @@ import random
 import base64
 from datetime import datetime
 
+import os
 import firebase_admin
 from firebase_admin import messaging
 from firebase_admin import credentials
 from firebase_admin import firestore
-cred = credentials.Certificate("./igps-dc0c0-firebase-adminsdk-op9lv-646bbb1f7c.json")
+
+cred_path = os.path.abspath(os.path.dirname(__file__)) + "/credentials.json"
+cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 fs_db = firestore.client()
 
