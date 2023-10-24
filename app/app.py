@@ -21,7 +21,7 @@ import firebase_admin
 from firebase_admin import messaging
 from firebase_admin import credentials
 from firebase_admin import firestore
-cred = credentials.Certificate("../private-data/igps-dc0c0-firebase-adminsdk-op9lv-646bbb1f7c.json")
+cred = credentials.Certificate("./igps-dc0c0-firebase-adminsdk-op9lv-646bbb1f7c.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
