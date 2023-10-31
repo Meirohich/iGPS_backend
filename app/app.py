@@ -22,6 +22,7 @@ import firebase_admin
 from firebase_admin import messaging
 from firebase_admin import credentials
 from firebase_admin import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter, Or
 
 cred_path = os.path.abspath(os.path.dirname(__file__)) + "/credentials.json"
 cred = credentials.Certificate(cred_path)
@@ -94,15 +95,29 @@ def payment():
 
 def check(args):
     txn_id = args.get('txn_id')
-    account = args.get('account')
-    sum = args.get('sum')
+    user_id = args.get('account')
+    _sum = args.get('sum')
 
+    try:
 
-    js_data = jsonify({'txn_id': txn_id,
-                        'result': 0,
-                        'comment': ''})
-    js_data = getPayments()
-    return js_data
+        payment = checkPaymentByTxnId(txn_id)
+        if not payment:
+            payment = checkPayment(user_id, _sum)
+        # return payment
+
+        if payment:
+            if updatePayment(payment['id'], txn_id):
+                status = 0 #available
+            else:
+                status = 5 #provider error
+        else:
+            status = 1 #not found
+
+    except Exception as e:
+        status = 5 #provider error
+        error = str(e)
+
+    return jsonify({'txn_id': txn_id, 'result': status, 'comment': error if status == 5 else ''})
 
 
 def pay(args):
@@ -111,12 +126,78 @@ def pay(args):
     account = args.get('account')
     sum = args.get('sum')
 
-    js_data = jsonify({'txn_id': txn_id,
-                        'prv_txn_id': 'id of payment document',
-                        'result': 0,
-                        'sum': sum,
-                        'comment': 'OK'})
-    return js_data
+    try:
+        payment = checkPaymentByTxnId(txn_id)
+
+        if payment:
+            # if updatePayment(payment['id'], txn_id):
+            #     status = 0 #available
+            # else:
+            #     status = 5 #provider error
+            status = 0 #available
+        else:
+            status = 1 #not found
+
+    except Exception as e:
+        status = 5 #provider error
+        error = str(e)
+
+    return jsonify({'id': payment['id'], 'createdAt': payment['createdAt']})
+    # return jsonify(payment)
+    # return jsonify({'txn_id': txn_id, 'prv_txn_id': payment['id'], 'result': status, 'sum': _sum, 'comment': error if status == 5 else 'OK'})
+
+def updatePayment(paymentId, txn_id):
+    payment_ref = fs_db.collection('payments').document(paymentId)
+
+    try:
+        payment_ref.update({'txn_id': txn_id})
+        return 1
+    except Exception as e:
+        return None
+
+def checkPayment(user_id, _sum):
+    try:
+        payment_ref = fs_db.collection('payments')
+        query = payment_ref.where(filter=FieldFilter('user_id', '==', int(user_id))).where(filter=FieldFilter('sum', '==', round(float(_sum)))).order_by('createdAt', direction=firestore.Query.DESCENDING).limit(1)
+
+        docs = query.stream()
+
+        payments = []
+
+        for doc in docs:
+            payment = doc.to_dict()
+            payment['id'] = doc.id
+            # payment['data'] = doc._data
+            payments.append(payment)
+
+        if payments:
+            # return payments
+            return payments[0]
+        else:
+            return None
+
+    except Exception as e:
+        return str(e)
+
+def checkPaymentByTxnId(txn_id):
+    try:
+        payment_ref = fs_db.collection('payments')
+        query = payment_ref.where(filter=FieldFilter('txn_id', '==', txn_id)).order_by('createdAt', direction=firestore.Query.DESCENDING)
+        docs = query.stream()
+
+        payments = []
+
+        for doc in docs:
+            payment = doc.to_dict()
+            payment['id'] = doc.id
+            payments.append(payment)
+            if payments:
+                return payments[0]
+            else:
+                return None
+
+    except Exception as e:
+        return str(e)
 
 def getPayments():
     docs = (fs_db.collection('payments').stream())
@@ -136,6 +217,8 @@ def getPayments():
         print(f"Payment Info: {payment['data']}")
         print()
     return jsonify(payments)
+
+
 def token_required(f):
     @wraps(f)
     def decorator(*args, **kwargs):
@@ -373,6 +456,27 @@ def register_user(_username, _password, _name, _mobile, _lang, _email):
     result = {'email': new_user['name'] + ' is registered'}
 
     return jsonify({'result' : result})
+
+
+@app.route('/listUsers', methods=['GET'])
+@token_required
+def get_users(current_user):
+    users_db = mongo.db.new_users
+    devices_db = mongo.db.device
+    users = []
+    for user in users_db.find():
+        devices_count = devices_db.count_documents({'user': user['_id']})
+        users.append({
+            'username': user['username'],
+            'email': user['email'],
+            'name': user['name'],
+            'mobile': user['mobile'],
+            'lang': user['lang'],
+            'count': devices_count
+        })
+
+    return jsonify({'users': users})
+
 
 
 @app.route('/login', methods=['POST'])
