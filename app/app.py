@@ -130,11 +130,13 @@ def pay(args):
         payment = checkPaymentByTxnId(txn_id)
 
         if payment:
-            # if updatePayment(payment['id'], txn_id):
-            #     status = 0 #available
-            # else:
-            #     status = 5 #provider error
-            status = 0 #available
+            for asset in payment['assets']:
+                upd = updateAssetExpiration(asset['imei'], asset['new_expiration_date'])
+                if upd == 1:
+                    status = 0 #available
+                else:
+                    status = 5 #provider error
+                    error = upd
         else:
             status = 1 #not found
 
@@ -142,9 +144,9 @@ def pay(args):
         status = 5 #provider error
         error = str(e)
 
-    return jsonify({'id': payment['id'], 'createdAt': payment['createdAt']})
+    # return jsonify({'id': payment['id'], 'createdAt': payment['createdAt'], 'type': payment['assets'][0]})
     # return jsonify(payment)
-    # return jsonify({'txn_id': txn_id, 'prv_txn_id': payment['id'], 'result': status, 'sum': _sum, 'comment': error if status == 5 else 'OK'})
+    return jsonify({'txn_id': txn_id, 'prv_txn_id': payment['id'], 'result': status, 'sum': sum, 'comment': error if status == 5 else 'OK'})
 
 def updatePayment(paymentId, txn_id):
     payment_ref = fs_db.collection('payments').document(paymentId)
@@ -199,6 +201,26 @@ def checkPaymentByTxnId(txn_id):
     except Exception as e:
         return str(e)
 
+def updateAssetExpiration(imei, expiration):
+    asset_ref = fs_db.collection('devices')
+    query = asset_ref.where(filter=FieldFilter('imei', '==', imei))
+    docs = query.stream()
+
+    assets = []
+
+    for doc in docs:
+        asset = doc.to_dict()
+        asset['id'] = doc.id
+        assets.append(asset)
+
+    asset_ref = fs_db.collection('devices').document(assets[0]['id'])
+
+    try:
+        asset_ref.update({'expirationDate': expiration})
+        return 1
+    except Exception as e:
+        return ref + str(e)
+
 def getPayments():
     docs = (fs_db.collection('payments').stream())
     payments = []
@@ -247,7 +269,6 @@ def token_required(f):
 
 @app.route('/dev_to_lat',methods=['POST'])
 def dev_to_lat():
-
 
     #if request.remote_addr != '127.0.0.1':
     #   abort(403)
