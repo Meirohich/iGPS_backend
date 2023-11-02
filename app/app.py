@@ -59,6 +59,30 @@ except Exception as e:
     print(f"Error connecting to MongoDB Atlas: {str(e)}")
 
 
+@app.route('/transfer_asset')
+def transfer_asset():
+    asset_path = os.path.abspath(os.path.dirname(__file__)) + "/asset.json"
+    with open(asset_path, "r") as f:
+    # Load the JSON data
+        assets = json.load(f)
+    ids = ''
+    for asset in assets:
+        asset['_id'] = int(asset['_id'])
+        asset['user'] = int(asset['user'])
+        asset['device'] = int(asset['device'])
+        asset['asset_name'] = str(asset['asset_name'])
+        asset['latlng'] = firestore.GeoPoint(asset['current_lat'], asset['current_lng'])
+        asset['battery_status'] = str(asset['battery_status'])
+        asset['is_inzone'] = bool(asset['is_inzone'])
+        # asset['datetime'] = firestore.Timestamp.from_datetime(asset['datetime'])
+        asset['datetime'] = datetime.strptime(asset["datetime"], "%Y-%m-%dT%H:%M:%S+0000")
+        asset['is_notified'] = bool(asset['is_notified'])
+        doc_ref = fs_db.collection("asset").document()
+        doc_ref.set(asset)
+
+
+    return jsonify({'ids': 'ok'})
+
 @app.route('/test_mongodb_connection')
 def test_mongodb_connection():
     # data = mongo.db.new_users.find_one()
@@ -144,8 +168,6 @@ def pay(args):
         status = 5 #provider error
         error = str(e)
 
-    # return jsonify({'id': payment['id'], 'createdAt': payment['createdAt'], 'type': payment['assets'][0]})
-    # return jsonify(payment)
     return jsonify({'txn_id': txn_id, 'prv_txn_id': payment['id'], 'result': status, 'sum': sum, 'comment': error if status == 5 else 'OK'})
 
 def updatePayment(paymentId, txn_id):
