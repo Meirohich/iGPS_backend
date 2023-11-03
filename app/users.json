@@ -1,0 +1,130 @@
+[{
+  "_id": 7,
+  "username": "Talgat.dosai",
+  "email": "None",
+  "password": "$2b$12$uXGspXKNBcwxgDnQ.Axm2efNZkpkzAXdEI3RoyaOLFnaPigrssdFu",
+  "name": "Жарылғасов Талғат Бисембиевич",
+  "mobile": "87715412587",
+  "lang": "ru",
+  "firebase_token": "eWiH3CTkSSGpq5REu-Ekhk:APA91bE-E02Vvj85MKmu4mwxlcOyasfxswrS4s0mOiHNtbUiuvmhzpY-rxbCsWdl-_pVBqt2epGjAaMsMMI1pGGr5BQnSZZhn1GljhKi16VuKJiAx8ZS29jpLy4rMlUmyB0-5EzLso83"
+},
+{
+  "_id": 3,
+  "username": "Max7883_2",
+  "email": "None",
+  "password": "$2b$12$SQFmK92cP2RY1BqfkBV.VelB4TUBgZJFJQvE3bOgqF.SQW.Zow2J2",
+  "name": "Джусупов Максат",
+  "mobile": "87715412387",
+  "lang": "ru",
+  "firebase_token": 1
+},
+{
+  "_id": 5,
+  "username": "Gabit77",
+  "email": "None",
+  "password": "$2b$12$l.v6prpsL6aPCPlVTnLXIecBewC0SactPZ1wfEQSCxNl2tkoPxnb.",
+  "name": "Габит",
+  "mobile": "87715412537",
+  "lang": "ru",
+  "firebase_token": "cW26neKOTWCLNumIAiYYqY:APA91bHetUbaixXWCh8Pfr4LuiqX17VqKadpLo2JBUqpmGaGnnMdBx8j1N6XkyKyr3BT5blOde89ODhuzXxVmquFHbhsbHvuF2xVNGh2qeRdZUguWUBV0hT2wiQjzXNg7WQBzP6mPJyQ"
+},
+{
+  "_id": 2,
+  "username": "Max7883",
+  "email": "None",
+  "password": "$2b$12$mZsOmIaWkDF20v9sALBVjecS4oxZc8tsYEhU3SomJnCwPQQImUb1C",
+  "name": "Джусупов Максат",
+  "mobile": "87711112587",
+  "lang": "ru",
+  "firebase_token": 1
+},
+{
+  "_id": 6,
+  "username": "Nurik",
+  "email": "None",
+  "password": "$2b$12$Ogf67jWTCdH/c4U5KQ5PQu6IpmCBj.U7mFyFQOrRynH1T7TPhS1Jy",
+  "name": "Оразбеков Нуржан Оразбекулы",
+  "mobile": "87715412337",
+  "lang": "ru",
+  "firebase_token": 1
+},
+{
+  "_id": 11,
+  "username": "Maxer",
+  "email": "max@ff.com",
+  "password": "$2b$12$cZRMzLcxqCChbUuHjEhqF.UQ0hIvse03NfKgWpaZq2u3SrC5kPc8O",
+  "name": "Maxim",
+  "mobile": "87711111111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 12,
+  "username": "Maxer2",
+  "email": "max@ff.com",
+  "password": "$2b$12$AnWuaziRy70b0bQHYT6AdOJOXRIGILVu7oje8OK/nPjSkvr.dBesq",
+  "name": "Maxim",
+  "mobile": "87711141111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 13,
+  "username": "Maxer1",
+  "email": "max@ff.com",
+  "password": "$2b$12$1//GKp.YikdzAi4fKkCwoOaDmym/F8inDy/RMJz2Ig/qCn0acF03u",
+  "name": "Maxim Korzh",
+  "mobile": "87711111611",
+  "lang": "eng",
+  "firebase_token": null
+},
+{
+  "_id": 14,
+  "username": "Maxer11",
+  "email": "max@ff.com",
+  "password": "$2b$12$aBBXScKjIUZs3iCtSlzUjOeeVYe1fN87Ztvr2Y6ojSEHh0Ppq1pxO",
+  "name": "Maxim Korzh",
+  "mobile": "87711111111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 16,
+  "username": "Maxer22",
+  "email": "max@ff.com",
+  "password": "$2b$12$AvLYKErxvICXS2oBAZmNFuHMwBJ2xybHQfQgqc5nV.lGDlH86dzay",
+  "name": "Maxim Korzh",
+  "mobile": "87711111111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 17,
+  "username": "Maxer3",
+  "email": "max@ff.com",
+  "password": "$2b$12$3haov9hgfZgMb6F6DOAEHOPPi9wiX/D5ZJAsXDPRkRRAa.NeHucTS",
+  "name": "Maxim Korzh",
+  "mobile": "87711111111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 18,
+  "username": "Jaks",
+  "email": "jaks@ff.com",
+  "password": "$2b$12$IrXgDVJwFB/F2YrGwusLkOUGgOPbeKm5BGsjgn.odIkgqNXyTV1Mu",
+  "name": "Jaksylyk",
+  "mobile": "87711151111",
+  "lang": "eng",
+  "firebase_token": 1
+},
+{
+  "_id": 19,
+  "username": "test",
+  "email": "test@ff.com",
+  "password": "$2b$12$XMsK2HxWCNIAitIjv8gcAeJ8Q9kfxNQ144ep08b1phrCJbJXWkXZu",
+  "name": "Maxim Korzh",
+  "mobile": "87711111111",
+  "lang": "eng",
+  "firebase_token": 1
+}]

@@ -61,27 +61,72 @@ except Exception as e:
 
 @app.route('/transfer_asset')
 def transfer_asset():
-    asset_path = os.path.abspath(os.path.dirname(__file__)) + "/asset.json"
+    asset_path = os.path.abspath(os.path.dirname(__file__)) + "/devices_11.json"
     with open(asset_path, "r") as f:
     # Load the JSON data
         assets = json.load(f)
     ids = ''
     for asset in assets:
-        asset['_id'] = int(asset['_id'])
-        asset['user'] = int(asset['user'])
-        asset['device'] = int(asset['device'])
+        asset['asset_id'] = int(asset['_id'])
+        del asset['_id']
+        asset['user_id'] = int(asset['user'])
+        del asset['user']
+        del asset['device']
         asset['asset_name'] = str(asset['asset_name'])
         asset['latlng'] = firestore.GeoPoint(asset['current_lat'], asset['current_lng'])
+        del asset['current_lat']
+        del asset['current_lng']
         asset['battery_status'] = str(asset['battery_status'])
         asset['is_inzone'] = bool(asset['is_inzone'])
-        # asset['datetime'] = firestore.Timestamp.from_datetime(asset['datetime'])
         asset['datetime'] = datetime.strptime(asset["datetime"], "%Y-%m-%dT%H:%M:%S+0000")
         asset['is_notified'] = bool(asset['is_notified'])
-        doc_ref = fs_db.collection("asset").document()
-        doc_ref.set(asset)
+        asset['device_type'] = str(asset['device_info'][0]['device_type'])
+        asset['messenger_id'] = str(asset['device_info'][0]['messenger_id'])
+        del asset['device_info']
+        asset['exp_date'] = None
+        asset['status'] = str('inactive')
+        asset['photo_url'] = None
+
+        try:
+            doc_ref = fs_db.collection("devices").document()
+            doc_ref.set(asset)
+            status = 'ok'
+        except Exception as e:
+            status = str(e)
 
 
-    return jsonify({'ids': 'ok'})
+    return jsonify({'status': status})
+
+@app.route('/transfer_users')
+def transfer_users():
+    user_path = os.path.abspath(os.path.dirname(__file__)) + "/users.json"
+    with open(user_path, "r") as f:
+    # Load the JSON data
+        users = json.load(f)
+    ids = ''
+    for user in users:
+        user['user_id'] = int(user['_id'])
+        del user['_id']
+        user['username'] = str(user['username'])
+        user['name'] = str(user['name'])
+        user['mobile'] = int(user['mobile'])
+        user['lang'] = str(user['lang'])
+        user['firebase_token'] = str(user['firebase_token'])
+        user['email'] = str(user['email'])
+        user['created_at'] = datetime.now()
+        user['role'] = str('user')
+        del user['password']
+
+
+        try:
+            doc_ref = fs_db.collection("users").document()
+            doc_ref.set(user)
+            status = 'ok'
+        except Exception as e:
+            status = str(e)
+
+
+    return jsonify({'status': status})
 
 @app.route('/test_mongodb_connection')
 def test_mongodb_connection():

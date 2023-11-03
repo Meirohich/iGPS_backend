@@ -1,0 +1,100 @@
+[{
+  "_id": 8,
+  "user": 11,
+  "device": 8,
+  "asset_name": "Ерон Красавчик ",
+  "current_lat": 51.17154,
+  "current_lng": 74.73202,
+  "battery_status": "LOW",
+  "is_inzone": true,
+  "datetime": "2021-05-18T13:12:35+0000",
+  "is_notified": false,
+  "device_info": [
+    {
+      "_id": 8,
+      "user": 11,
+      "device_type": "SPOTTRACE",
+      "messenger_id": "0-3149835"
+    }
+  ]
+},
+{
+  "_id": 6,
+  "user": 11,
+  "device": 6,
+  "asset_name": "Лексус япошка",
+  "current_lat": 51.16551,
+  "current_lng": 74.69427,
+  "battery_status": "GOOD",
+  "is_inzone": true,
+  "datetime": "2021-07-04T21:52:00+0000",
+  "is_notified": false,
+  "device_info": [
+    {
+      "_id": 6,
+      "user": 11,
+      "device_type": "SPOTTRACE",
+      "messenger_id": "0-3149844"
+    }
+  ]
+},
+{
+  "_id": 9,
+  "user": 11,
+  "device": 9,
+  "asset_name": "Азамат",
+  "current_lat": 51.15575,
+  "current_lng": 74.75407,
+  "battery_status": "LOW",
+  "is_inzone": true,
+  "datetime": "2021-06-22T20:24:57+0000",
+  "is_notified": false,
+  "device_info": [
+    {
+      "_id": 9,
+      "user": 11,
+      "device_type": "SPOTTRACE",
+      "messenger_id": "0-4404951"
+    }
+  ]
+},
+{
+  "_id": 10,
+  "user": 11,
+  "device": 10,
+  "asset_name": "Акбакай",
+  "current_lat": 51.18189,
+  "current_lng": 74.70641,
+  "battery_status": "GOOD",
+  "is_inzone": true,
+  "datetime": "2021-05-30T09:57:17+0000",
+  "is_notified": false,
+  "device_info": [
+    {
+      "_id": 10,
+      "user": 11,
+      "device_type": "SPOTTRACE",
+      "messenger_id": "0-3153687"
+    }
+  ]
+},
+{
+  "_id": 7,
+  "user": 11,
+  "device": 7,
+  "asset_name": "Пустой квадраtt",
+  "current_lat": 51.19896,
+  "current_lng": 74.69432,
+  "battery_status": "LOW",
+  "is_inzone": true,
+  "datetime": "2021-07-20T15:58:28+0000",
+  "is_notified": false,
+  "device_info": [
+    {
+      "_id": 7,
+      "user": 11,
+      "device_type": "SPOTTRACE",
+      "messenger_id": "0-3158050"
+    }
+  ]
+}]
