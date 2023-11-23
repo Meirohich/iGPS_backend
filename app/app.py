@@ -19,10 +19,9 @@ from datetime import datetime
 
 import os
 import firebase_admin
-from firebase_admin import messaging
-from firebase_admin import credentials
-from firebase_admin import firestore
+from firebase_admin import messaging, credentials, firestore, auth
 from google.cloud.firestore_v1.base_query import FieldFilter, Or
+from uuid import uuid4
 
 cred_path = os.path.abspath(os.path.dirname(__file__)) + "/credentials.json"
 cred = credentials.Certificate(cred_path)
@@ -85,7 +84,7 @@ def transfer_asset():
         del asset['device_info']
         asset['exp_date'] = None
         asset['status'] = str('inactive')
-        asset['photo_url'] = None
+        asset['photo_url'] = 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/i-g-p-s-k36u9l/assets/psnjn9iyahfy/default_horse_image.jpg'
 
         try:
             doc_ref = fs_db.collection("devices").document()
@@ -96,6 +95,149 @@ def transfer_asset():
 
 
     return jsonify({'status': status})
+
+@app.route('/auth_users')
+def auth_users():
+    user_path = os.path.abspath(os.path.dirname(__file__)) + "/users.json"
+    with open(user_path, "r") as f:
+        users = json.load(f)
+
+    user_records = [
+    auth.ImportUserRecord(
+        uid=str(uuid4()),
+        email=user['email'] if user['email'] not in [None, "None", ""] else str(user['username'] + '@gmail.com'),
+        email_verified=False,  # Set to True if you have verified emails
+        display_name=user['name'],
+        password_hash=bytes(user['password'], 'utf-8'),  # user['hashed_password'] should be the actual hash from your MongoDB
+        password_salt=None,  # bcrypt does not require a separate salt
+    )
+    for user in users  # users should be the list/dict of users you've prepared
+    ]
+
+    # Specify the hashing algorithm details used by your MongoDB (bcrypt)
+    hash_alg = auth.UserImportHash.bcrypt()
+
+    # Import the users to Firebase
+    try:
+        result = auth.import_users(user_records, hash_alg=hash_alg)
+        for err in result.errors:
+            print('Failed to import user:', err.reason)
+        status = 'ok'
+    except Exception as e:
+        return jsonify({'status': 'failed', 'message': str(e)}), 500
+
+    for user, user_record in zip(users, user_records):
+        additional_user_data = {
+            "username": str(user['username']),
+            "lang": str(user['lang']),
+            "firebase_token": str(user['firebase_token']),
+            "role": 'user',
+            "user_id": int(user['_id']),
+            "email": user['email'] if user['email'] not in [None, "None", ""] else str(user['username'] + '@gmail.com'),
+            "display_name": user['name'],
+            "phone_number": None if 'mobile' not in user else str(user['mobile']) if str(user['mobile'][0]) == '+' else str('+7'+user['mobile'][1:]),
+            "created_time": datetime.now()
+        }
+        fs_db.collection('users').document(user_record.uid).set(additional_user_data)
+
+    return jsonify({'status': 'ok'}), 200
+
+@app.route('/createUserWithoutLogin', methods=['POST'])
+def create_user_without_login():
+    try:
+        # Extract user data from request body
+        data = request.json
+        email = data['email']
+        password = data['password']
+        display_name = data['displayName']
+        role = data['role']
+        phone_number = data['phoneNumber']
+        lang = data['lang']
+        username = data['username']
+        user_id = data['userId']
+        permissions = data['permissions']
+
+        # Create user with Firebase Authentication
+        user_record = auth.create_user(
+            email=email,
+            password=password,
+            display_name=display_name
+        )
+
+        # Connect to Firestore
+        fs_db = firestore.client()
+        users_ref = fs_db.collection('users')
+
+        # Create document in Firestore
+        user_doc = users_ref.document(user_record.uid).set({
+            'display_name': display_name,
+            'username': username,
+            'phone_number': phone_number,
+            'user_id': user_id,
+            'role': role,
+            'lang': lang,
+            'firebase_token': '1',
+            'email': email,
+            'created_time': firestore.SERVER_TIMESTAMP,
+            'permissions': permissions
+        })
+        return permissions
+        return jsonify({'success': True, 'uid': user_record.uid}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/custom_login', methods=['POST'])
+def custom_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    try:
+        # Authenticate the user
+        user = auth.sign_in_with_email_and_password(email, password)
+
+        # Fetch additional user details from Firestore if needed
+        user_record = fs_db.collection('users').document(user.uid).get()
+        if user_record.exists:
+            user_data = user_record.to_dict()
+            return jsonify(user_data), 200
+        else:
+            return jsonify({'message': 'User details not found'}), 404
+
+    except auth.AuthError as e:
+        # Handle authentication errors
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        # Handle other exceptions
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/update-email', methods=['POST'])
+def update_email():
+    # Extract the ID token and new email from the request
+    uid = request.json.get('uid')
+    new_email = request.json.get('newEmail')
+
+    if not uid or not new_email:
+        return jsonify({'error': 'Missing ID or new email'}), 400
+
+    try:
+        # Update the user's email
+        auth.update_user(uid, email=new_email)
+
+        user_doc_ref = fs_db.collection('users').document(uid)
+        user_doc_ref.update({'email': new_email})
+
+        return jsonify({'success': True}), 200
+
+    except firebase_admin.auth.AuthError as e:
+        # Handle Firebase Auth exceptions
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        # Handle other exceptions
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/transfer_users')
 def transfer_users():
@@ -109,18 +251,22 @@ def transfer_users():
         del user['_id']
         user['username'] = str(user['username'])
         user['name'] = str(user['name'])
-        user['mobile'] = int(user['mobile'])
+        # user['mobile'] = int(user['mobile'])
+        user['phone_number'] = None if 'mobile' not in user else str('+7'+ user['mobile'][1:]),
+        user['display_name']=user['name'],
         user['lang'] = str(user['lang'])
         user['firebase_token'] = str(user['firebase_token'])
-        user['email'] = str(user['email'])
+        user['email'] = user['email'] if user['email'] not in [None, "None", ""] else str(user['username'] + '@gmail.com')
         user['created_at'] = datetime.now()
         user['role'] = str('user')
-        del user['password']
 
+        password = user['password']
+        del user['password']
 
         try:
             doc_ref = fs_db.collection("users").document()
             doc_ref.set(user)
+            # firebase_auth.create_user_with_email_and_password(user['email'], password)
             status = 'ok'
         except Exception as e:
             status = str(e)
@@ -150,6 +296,64 @@ def index():
       return "Hello world!"
 
 
+
+@app.route('/delete_user', methods=['POST'])
+def delete_user():
+    data = request.json
+    user_id = data.get('user_id')
+    # Delete user from Firebase Authentication
+    try:
+        auth.delete_user(user_id)
+        print('Successfully deleted user from Firebase Authentication.')
+    except Exception as e:
+        print(f'Error deleting user from Authentication: {e}')
+        return str(e)
+        # return jsonify({'result': str(e)})
+
+    # Delete user data from Firestore
+    try:
+            # Assuming you have a 'users' collection and the document ID is the user's ID
+        fs_db.collection('users').document(user_id).delete()
+        print('Successfully deleted user data from Firestore.')
+    except Exception as e:
+        print(f'Error deleting user data from Firestore: {e}')
+        return str(e)
+        # return jsonify({'result': str(e)})
+
+    return 'success'
+    # return jsonify({'result': 'success'})
+
+
+@app.route('/get_payments_by_msg_id', methods=['POST'])
+def get_payments():
+    data = request.json
+    messenger_id = data.get('messenger_id')
+    if not messenger_id:
+        return jsonify({'result': 'messenger_id is required'}), 400
+
+    try:
+        payments_ref = fs_db.collection('payments')
+        # Query for documents where status is 0 and assets contain the messenger_id
+        query = payments_ref.where('status', '==', 0)
+        docs = query.stream()
+
+        matching_docs = []
+        for doc in docs:
+            assets = doc.to_dict().get('assets', [])
+            # Check if any asset in the assets array has the messenger_id
+            if any(asset.get('messenger_id') == messenger_id and asset.get('months') > 0 for asset in assets):
+                matching_docs.append(doc.id)
+
+        for doc_id in matching_docs:
+            doc_ref = payments_ref.document(doc_id)
+            doc_ref.delete()
+
+        return jsonify({'result': 'success'}), 200
+
+    except Exception as e:
+        return jsonify({'result': str(e)}), 500
+
+
 @app.route('/payment')
 def payment():
     command = request.args.get('command')
@@ -165,55 +369,106 @@ def payment():
 def check(args):
     txn_id = args.get('txn_id')
     user_id = args.get('account')
-    _sum = args.get('sum')
+    sum = args.get('sum')
+    error = 'error'
 
     try:
 
         payment = checkPaymentByTxnId(txn_id)
         if not payment:
-            payment = checkPayment(user_id, _sum)
-        # return payment
+            payment = checkPayment(user_id, sum)
 
         if payment:
-            if updatePayment(payment['id'], txn_id):
-                status = 0 #available
+            if float(payment['sum']) == float(sum):
+                if int(payment['user_id']) == int(user_id):
+                    if payment.get('txn_id') is None:
+                        upd = updatePayment(payment['id'], txn_id)
+                        if upd == 1:
+                            status = 0 #available
+                        else:
+                            status = 5 #provider error
+                            error = 'payment update failed'
+                    else:
+                        if str(payment['txn_id']) == str(txn_id):
+                            status = 0 #available
+                        else:
+                            status = 1 #not found
+                            error = 'txn_id is different'
+                else:
+                    status = 1 #provider error
+                    error = 'accounts are different'
             else:
-                status = 5 #provider error
+                status = 1 #provider error
+                error = 'sums are different'
         else:
             status = 1 #not found
+            error = 'payment not found'
 
     except Exception as e:
         status = 5 #provider error
         error = str(e)
 
-    return jsonify({'txn_id': txn_id, 'result': status, 'comment': error if status == 5 else ''})
+    return jsonify({'txn_id': txn_id, 'result': status, 'comment': error if status == 5 or status == 1 else ''})
 
 
 def pay(args):
     txn_id = args.get('txn_id')
     txn_date = args.get('txn_date')
-    account = args.get('account')
+    user_id = args.get('account')
     sum = args.get('sum')
+
+    error = 'error'
+    count = 0
 
     try:
         payment = checkPaymentByTxnId(txn_id)
 
         if payment:
-            for asset in payment['assets']:
-                upd = updateAssetExpiration(asset['imei'], asset['new_expiration_date'])
-                if upd == 1:
-                    status = 0 #available
+            if int(payment['status']) == 0:
+                if float(payment['sum']) == float(sum):
+                    if int(payment['user_id']) == int(user_id):
+                        if payment.get('id') is not None:
+                            assets = list(filter(lambda x: x['months'] > 0, payment['assets']))
+                            for asset in assets:
+                                updRes = updateAssetExpiration(asset['messenger_id'], asset['new_expiration_date'])
+                                if updRes == 1:
+                                    count += 1
+                                    status = 0 #available
+                                else:
+                                    status = 5 #provider error
+                                    error = updRes
+                            if status == 0 and count == len(assets):
+                                date = updatePaymentDate(payment['id'], txn_date)
+                                if date is None:
+                                    status = 5 #provider error
+                                    error = 'failed to set txn_date'
+                                if updatePaymentStatus(payment['id'], 3) is None:
+                                    status = 5 #provider error
+                                    error = 'failed to update payment status'
+                        else:
+                            status = 1 #not found
+                            error = 'payment id not found'
+                    else:
+                        status = 1 #provider error
+                        error = 'accounts are different'
                 else:
-                    status = 5 #provider error
-                    error = upd
+                    status = 1 #not found
+                    error = 'sums are different'
+                # if updatePaymentStatus(payment['id'], 3) is None:
+                #     status = 5 #provider error
+                #     error = 'failed to update payment status'
+            else:
+                status = payment['status']
         else:
             status = 1 #not found
+            error = 'not found'
 
     except Exception as e:
         status = 5 #provider error
         error = str(e)
 
-    return jsonify({'txn_id': txn_id, 'prv_txn_id': payment['id'], 'result': status, 'sum': sum, 'comment': error if status == 5 else 'OK'})
+    return jsonify({'count': count, 'txn_id': txn_id, 'prv_txn_id': payment['id'] if payment else None, 'result': status, 'sum': sum, 'comment': error if status == 5 or status == 1 else 'OK' if status == 0 else ''})
+
 
 def updatePayment(paymentId, txn_id):
     payment_ref = fs_db.collection('payments').document(paymentId)
@@ -224,10 +479,28 @@ def updatePayment(paymentId, txn_id):
     except Exception as e:
         return None
 
-def checkPayment(user_id, _sum):
+def updatePaymentStatus(paymentId, status):
+    payment_ref = fs_db.collection('payments').document(paymentId)
+
+    try:
+        payment_ref.update({'status': status})
+        return 1
+    except Exception as e:
+        return None
+
+def updatePaymentDate(paymentId, txn_date):
+    payment_ref = fs_db.collection('payments').document(paymentId)
+
+    try:
+        payment_ref.update({'txn_date': datetime.strptime(txn_date, "%Y%m%d%H%M%S")})
+        return 1
+    except Exception as e:
+        return None
+
+def checkPayment(user_id, sum):
     try:
         payment_ref = fs_db.collection('payments')
-        query = payment_ref.where(filter=FieldFilter('user_id', '==', int(user_id))).where(filter=FieldFilter('sum', '==', round(float(_sum)))).order_by('createdAt', direction=firestore.Query.DESCENDING).limit(1)
+        query = payment_ref.where(filter=FieldFilter('user_id', '==', int(user_id))).where(filter=FieldFilter('sum', '==', float(sum))).order_by('createdAt', direction=firestore.Query.DESCENDING).limit(1)
 
         docs = query.stream()
 
@@ -260,17 +533,18 @@ def checkPaymentByTxnId(txn_id):
             payment = doc.to_dict()
             payment['id'] = doc.id
             payments.append(payment)
-            if payments:
-                return payments[0]
-            else:
-                return None
+
+        if payments:
+            return payments[0]
+        else:
+            return None
 
     except Exception as e:
         return str(e)
 
-def updateAssetExpiration(imei, expiration):
+def updateAssetExpiration(messenger_id, expiration):
     asset_ref = fs_db.collection('devices')
-    query = asset_ref.where(filter=FieldFilter('imei', '==', imei))
+    query = asset_ref.where(filter=FieldFilter('messenger_id', '==', messenger_id))
     docs = query.stream()
 
     assets = []
@@ -283,10 +557,13 @@ def updateAssetExpiration(imei, expiration):
     asset_ref = fs_db.collection('devices').document(assets[0]['id'])
 
     try:
-        asset_ref.update({'expirationDate': expiration})
+        if assets[0]['status'] == 'active':
+            asset_ref.update({'exp_date': expiration})
+        else:
+            asset_ref.update({'status': 'pending', 'exp_date': expiration})
         return 1
     except Exception as e:
-        return ref + str(e)
+        return None
 
 def getPayments():
     docs = (fs_db.collection('payments').stream())
@@ -295,10 +572,6 @@ def getPayments():
         payment = doc.to_dict()
         payment['id'] = doc.id
         payment['data'] = doc._data
-        # payment['user_id'] = doc.user_id
-        # payment['sum'] = doc.sum
-        # payment['createdAt'] = doc.createdAt
-        # payment['status'] = doc.status
         payments.append(payment)
 
     for payment in payments:
@@ -334,11 +607,24 @@ def token_required(f):
     return decorator
 
 
+# Change stream
+pipeline = [
+    {'$match': {'operationType': 'update', 'updateDescription.updatedFields.messages': {'$exists': True}}}
+]
+
+with mongo.db.devices.watch(pipeline) as stream:
+    for change in stream:
+        print(change)  # For debugging purposes
+        dev_to_lat(change)
+
+
 @app.route('/dev_to_lat',methods=['POST'])
-def dev_to_lat():
+def dev_to_lat(change):
 
     #if request.remote_addr != '127.0.0.1':
     #   abort(403)
+
+    return jsonify({'id': change}), 200
 
     data = request.get_json()
     print(data)
@@ -349,7 +635,7 @@ def dev_to_lat():
 
     if not objs:
         print("Objs is empty")
-        return jsonify({'message':'no devices for this username'})
+        return jsonify({'message':'no devices for this username'}), 404
 
     print("Len of objs: " + str(len(objs)))
     print("Username: " + str(username))
@@ -388,40 +674,58 @@ def dev_to_lat():
             print(batSt)
             print(latest_mess_time)
             print ("Insert or update " + obj["esn"])
-            result = mongo.db.latest_spot_messages.update_one(
-                {"messengerId": obj["esn"]},
-                {
-                    "$set": {
-                        "username": username,
-                        "feedId": "empty",
-                        "latest_message": {
-                            "id": 2346,
-                            "messengerId": obj["esn"],
-                            "messageType": "default",
-                            "altitude": 0,
-                            "dateTime": latest_mess_time,
-                            "latitude": lat,
-                            "longitude": lng,
-                            "unixTime": newlist[-1]["unixTime"],
-                            "batteryState": batSt,
-                            "modelId": "SMARTONE",
-                            "messengerName": messengerName
-                        },
-                        "messengerId": obj["esn"]
-                    }
-                },
-                upsert=True
-            )
+            # result = mongo.db.latest_spot_messages.update_one(
+            #     {"messengerId": obj["esn"]},
+            #     {
+            #         "$set": {
+            #             "username": username,
+            #             "feedId": "empty",
+            #             "latest_message": {
+            #                 "id": 2346,
+            #                 "messengerId": obj["esn"],
+            #                 "messageType": "default",
+            #                 "altitude": 0,
+            #                 "dateTime": latest_mess_time,
+            #                 "latitude": lat,
+            #                 "longitude": lng,
+            #                 "unixTime": newlist[-1]["unixTime"],
+            #                 "batteryState": batSt,
+            #                 "modelId": "SMARTONE",
+            #                 "messengerName": messengerName
+            #             },
+            #             "messengerId": obj["esn"]
+            #         }
+            #     },
+            #     upsert=True
+            # )
+            try:
+                fs_device_ref = fs_db.collection('devices')
+                fs_query = fs_device_ref.where(filter=FieldFilter('messenger_id', '==', obj['esn']))
+                fs_docs = fs_query.stream()
 
-            #mongo.db.latest_spot_messages.update(
-            #        {"messengerId":obj["esn"]},
-            #        {"$set": {"username":username,"feedId":"empty", "latest_message": {
-            #            "id": 2344, "messengerId" : obj["esn"], "messageType" : "default", "altitude" : 0,"dateTime": latest_mess_time, "latitude": lat,"longitude": lng,"unixTime": newlist[-1]["unixTime"], "batteryState": batSt,"modelId": "SMARTONE","messengerName":messengerName }, "messengerId": obj["esn"]}},upsert=True)
+                fs_devices = []
+
+                for fs_doc in fs_docs:
+                    fs_device = fs_doc.to_dict()
+                    fs_device['id'] = fs_doc.id
+                    fs_devices.append(fs_device)
+
+                if fs_devices:
+                    fs_device_ref = fs_db.collection('devices').document(fs_devices[0]['id'])
+
+                    fs_device_ref.update({
+                        'latlng': firestore.GeoPoint(lat, lng),
+                        'datetime': datetime.strptime(latest_mess_time, "%Y-%m-%dT%H:%M:%S+0000"),
+                        'battery_status': batSt
+                        })
+
+            except Exception as e:
+                print(str(e))
 
         messengerNameId = messengerNameId + 1
 
 
-    return jsonify({'message':'successful return'})
+    return jsonify({'message':'success'}), 200
 
 
 @app.route('/reg_smartone',methods=['POST'])
@@ -443,19 +747,22 @@ def reg_smartone():
 
     # if mongo.db.devices.find({'esn': esni}).count() > 0:
     if mongo.db.devices.count_documents({'esn': esni}) > 0:
-        return jsonify({'message': "ESN " + esni + " already exists in the devices"})
+        return jsonify({'message': "ESN " + esni + " already exists in the devices"}), 409
 
-    count = mongo.db.devices.count_documents({})
+    # mongo.db.devices.insert_one({"_id":mongo.db.devices.count()+16, "esn":esni, "username":username,"messages":[]})
+    new_id = mongo.db.devices.count_documents({})+16
     new_device_document = {
-        "_id": count + 16,
+        "_id": new_id,
         "esn": esni,
         "username": username,
         "messages": []
     }
-    # mongo.db.devices.insert_one({"_id":mongo.db.devices.count()+16, "esn":esni, "username":username,"messages":[]})
+
     mongo.db.devices.insert_one(new_device_document)
-    js_data=jsonify({'message': 'devices registered successfully'})
-    return js_data
+
+    return jsonify({'_id': new_id, 'message': 'success'}), 200
+
+
 
 @app.route("/reg_smartone_c", methods=['POST'])
 def reg_smartone_c():

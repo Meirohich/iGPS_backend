@@ -51,7 +51,7 @@
 {
   "_id": 11,
   "username": "Maxer",
-  "email": "max@ff.com",
+  "email": "max11@ff.com",
   "password": "$2b$12$cZRMzLcxqCChbUuHjEhqF.UQ0hIvse03NfKgWpaZq2u3SrC5kPc8O",
   "name": "Maxim",
   "mobile": "87711111111",
@@ -61,7 +61,7 @@
 {
   "_id": 12,
   "username": "Maxer2",
-  "email": "max@ff.com",
+  "email": "max12@ff.com",
   "password": "$2b$12$AnWuaziRy70b0bQHYT6AdOJOXRIGILVu7oje8OK/nPjSkvr.dBesq",
   "name": "Maxim",
   "mobile": "87711141111",
@@ -71,7 +71,7 @@
 {
   "_id": 13,
   "username": "Maxer1",
-  "email": "max@ff.com",
+  "email": "max13@ff.com",
   "password": "$2b$12$1//GKp.YikdzAi4fKkCwoOaDmym/F8inDy/RMJz2Ig/qCn0acF03u",
   "name": "Maxim Korzh",
   "mobile": "87711111611",
@@ -81,7 +81,7 @@
 {
   "_id": 14,
   "username": "Maxer11",
-  "email": "max@ff.com",
+  "email": "max14@ff.com",
   "password": "$2b$12$aBBXScKjIUZs3iCtSlzUjOeeVYe1fN87Ztvr2Y6ojSEHh0Ppq1pxO",
   "name": "Maxim Korzh",
   "mobile": "87711111111",
@@ -91,7 +91,7 @@
 {
   "_id": 16,
   "username": "Maxer22",
-  "email": "max@ff.com",
+  "email": "max16@ff.com",
   "password": "$2b$12$AvLYKErxvICXS2oBAZmNFuHMwBJ2xybHQfQgqc5nV.lGDlH86dzay",
   "name": "Maxim Korzh",
   "mobile": "87711111111",
@@ -101,7 +101,7 @@
 {
   "_id": 17,
   "username": "Maxer3",
-  "email": "max@ff.com",
+  "email": "max17@ff.com",
   "password": "$2b$12$3haov9hgfZgMb6F6DOAEHOPPi9wiX/D5ZJAsXDPRkRRAa.NeHucTS",
   "name": "Maxim Korzh",
   "mobile": "87711111111",
